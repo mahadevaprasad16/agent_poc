@@ -1,2 +1,2 @@
-# agent_poc
+# agent-poc-private
 Agentic AI POC

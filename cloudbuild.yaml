@@ -1,0 +1,57 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _REGION: us-central1
+  _AR_REPO_NAME: agentic-ai-poc
+  _SERVICE_NAME: agentic-ai
+
+steps:
+- id: 'Build Image'
+  name: 'gcr.io/cloud-builders/docker'
+  args:
+    - 'build'
+    - '-t'
+    - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO_NAME}/${_SERVICE_NAME}:${SHORT_SHA}'
+    - '.'
+
+- id: 'Push Image'
+  name: 'gcr.io/cloud-builders/docker'
+  args:
+    - 'push'
+    - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO_NAME}/${_SERVICE_NAME}:${SHORT_SHA}'
+
+# NEW — required for :latest
+- id: 'Tag latest'
+  name: 'gcr.io/cloud-builders/docker'
+  args:
+    - 'tag'
+    - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO_NAME}/${_SERVICE_NAME}:${SHORT_SHA}'
+    - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO_NAME}/${_SERVICE_NAME}:latest'
+
+- id: 'Push latest'
+  name: 'gcr.io/cloud-builders/docker'
+  args:
+    - 'push'
+    - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO_NAME}/${_SERVICE_NAME}:latest'
+
+- id: 'Deploy to Cloud Run'
+  name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  args:
+    - 'gcloud'
+    - 'run'
+    - 'deploy'
+    - '${_SERVICE_NAME}'
+    - '--image'
+    - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO_NAME}/${_SERVICE_NAME}:${SHORT_SHA}'
+    - '--region'
+    - '${_REGION}'
+    - '--platform'
+    - 'managed'
+    - '--allow-unauthenticated'
+    - '--port'
+    - '8080'
+
+images:
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO_NAME}/${_SERVICE_NAME}:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO_NAME}/${_SERVICE_NAME}:latest'
